@@ -1,0 +1,18 @@
+[package]
+name = "kindergarten"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix = { version = "0.13.5", optional = true }
+actix-web = { version = "4.10.2", optional = true }
+dashmap = "6.1.0"
+futures = "0.3.31"
+serde = "1.0.219"
+tokio = { version = "1.44.2", features = ["io-std", "io-util", "macros", "process", "rt", "sync", "test-util"] }
+tokio-util = { version = "0.7.14", features = ["io"] }
+uuid = { version = "1.16.0", features = ["serde", "v4"] }
+
+[features]
+actix = ["dep:actix"]
+actix-web = ["dep:actix-web"]
