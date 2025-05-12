@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Async child process manager"
 repository = "https://github.com/Ichmed/kindergarten.git"
+license = "MIT"
 
 [dependencies]
 actix = { version = "0.13.5", optional = true }
