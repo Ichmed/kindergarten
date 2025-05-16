@@ -3,7 +3,10 @@ pub mod actix;
 
 use dashmap::{DashMap, Entry, mapref::one::Ref};
 #[cfg(unix)]
-use nix::{sys::signal, unistd::Pid};
+use nix::{
+    sys::signal::{self, Signal},
+    unistd::Pid,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     process::{ExitStatus, Stdio},
@@ -177,8 +180,15 @@ impl Kindergarten {
     }
 
     #[cfg(unix)]
+    /// Send SIGTERM
     pub async fn terminate(&self, t: Ticket) -> Option<std::io::Result<ExitStatus>> {
-        if let Err(err) = signal::kill(self.pid(t).await?, signal::SIGKILL)
+        self.send_signal(t, Signal::SIGTERM).await
+    }
+
+    #[cfg(unix)]
+    /// Send an arbitrarry unix signal
+    pub async fn send_signal(&self, t: Ticket, sig: Signal) -> Option<std::io::Result<ExitStatus>> {
+        if let Err(err) = signal::kill(self.pid(t).await?, sig)
             .map_err(|erno| std::io::Error::from_raw_os_error(erno as i32))
         {
             return Some(Err(err));
