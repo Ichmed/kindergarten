@@ -2,6 +2,8 @@
 pub mod actix;
 
 use dashmap::{DashMap, Entry, mapref::one::Ref};
+#[cfg(unix)]
+use nix::{sys::signal, unistd::Pid};
 use serde::{Deserialize, Serialize};
 use std::{
     process::{ExitStatus, Stdio},
@@ -161,14 +163,37 @@ impl Kindergarten {
         }
     }
 
+    #[cfg(unix)]
+    pub async fn pid(&self, t: Ticket) -> Option<Pid> {
+        self.access
+            .get(&t)?
+            .inner
+            .inner
+            .lock()
+            .await
+            .id()
+            .and_then(|pid| pid.try_into().ok())
+            .map(Pid::from_raw)
+    }
+
+    #[cfg(unix)]
     pub async fn terminate(&self, t: Ticket) -> Option<std::io::Result<ExitStatus>> {
+        if let Err(err) = signal::kill(self.pid(t).await?, signal::SIGKILL)
+            .map_err(|erno| std::io::Error::from_raw_os_error(erno as i32))
+        {
+            return Some(Err(err));
+        }
+        self.wait(t).await
+    }
+
+    pub async fn kill(&self, t: Ticket) -> Option<std::io::Result<ExitStatus>> {
         match self.access.get(&t) {
-            Some(c) => Some(Self::_terminate(c).await),
+            Some(c) => Some(Self::_kill(c).await),
             None => None,
         }
     }
 
-    async fn _terminate(c: Ref<'_, Ticket, Kind>) -> std::io::Result<ExitStatus> {
+    async fn _kill(c: Ref<'_, Ticket, Kind>) -> std::io::Result<ExitStatus> {
         let mut m = c.inner.inner.lock().await;
         m.start_kill()?;
         m.wait().await
